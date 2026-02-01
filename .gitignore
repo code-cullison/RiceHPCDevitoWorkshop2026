@@ -129,3 +129,6 @@ cython_debug/
 
 # VS Code
 .vscode/
+
+# Figures
+**/Figs/
