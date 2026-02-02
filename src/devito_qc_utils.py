@@ -4,8 +4,64 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import BoundaryNorm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from devito import Function, Eq, Operator
+from functools import wraps
+from contextlib import contextmanager
+
+from devito import Function, Eq, Operator, configuration
 from devito.symbolics import retrieve_functions
+
+
+#################################################################################
+##
+## If you want to set the Logging-Level of Devito Operator class
+##
+#################################################################################
+
+def myloglevel_devito(level):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            old_level = configuration['log-level']
+            try:
+                configuration['log-level'] = level
+                return func(*args, **kwargs)
+            finally:
+                configuration['log-level'] = old_level
+        return wrapper
+    return decorator
+
+@myloglevel_devito('ERROR')
+def myquiet_op(op, nt=None):
+    """Run operator with ERROR log level."""
+    if nt is not None:
+        return op.apply(time_M=nt)
+    else:
+        return op()
+
+@myloglevel_devito('DEBUG')
+def mydebug_op(op, nt=None):
+    """Run operator with DEBUG log level."""
+    if nt is not None:
+        return op.apply(time_M=nt)
+    else:
+        return op()
+
+
+#################################################################################
+##
+## If you want to set any log level for a blocked code region, including Devito 
+## Example: with devito_log_level('ERROR'): <code block>
+##
+#################################################################################
+@contextmanager
+def devito_log_level(level):
+    old_level = configuration['log-level']
+    try:
+        configuration['log-level'] = level
+        yield
+    finally:
+        configuration['log-level'] = old_level
+
 
 
 def plot_equation_grid(equations, target_func, grid, ncols=3, cmap_name="jet"):
@@ -22,21 +78,22 @@ def plot_equation_grid(equations, target_func, grid, ncols=3, cmap_name="jet"):
     n_eqs = len(equations)
     nrows = int(np.ceil(n_eqs / ncols))
     fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(5*ncols, 5*nrows))
-    print(f'axes.shape B4: {axes.shape}')
     axes = np.array(axes).reshape(-1)
-    print(f'axes.shape AF: {axes.shape}')
 
     for i, (eq, ax) in enumerate(zip(equations, axes)):
         target_func.data[:] = 0
-        Operator(eq)()
+        
+        # op_loglevel = 'DEBUG'
+        op_loglevel = 'ERROR'
+        with devito_log_level(op_loglevel):
+            _ = Operator(eq)()
 
         # setup colormap and normalization
         dmax = max(np.max(target_func.data),len(equations))
         dmin = np.min(target_func.data)
-        print(f'target_func.data min/max: {dmin}/{dmax}')
         assert dmin >= 0, "Data contains negative values."
         levels = np.arange(-0.5, dmax + 0.5 + 1, 1)
-        print(f'levels: {levels}')
+
         cmap = plt.get_cmap(cmap_name, len(levels) - 1)
         norm = BoundaryNorm(levels, cmap.N)
 
@@ -99,9 +156,14 @@ def create_domain_functions_and_equations(grid, subdomains):
     # Combine all equations: full domain + subdomains
     all_equations = [eq_full] + subdomain_equations
 
+    ###########################################################
     # Run the operator to apply the each equation separately
-    _ = Operator(all_equations)()
+
+    # mydebug_op(Operator(all_equations))
+    myquiet_op(Operator(all_equations))
+
     
+    ###########################################################
     # For demonstration, create combined equations (step-by-step inclusion of subdomains) 
     import operator
     from itertools import accumulate
@@ -111,7 +173,10 @@ def create_domain_functions_and_equations(grid, subdomains):
     rhs_list = [lhs + s for s in partial_sums]
     combined_equations = [Eq(lhs, rhs) for rhs in rhs_list]
     
+    ###########################################################
     # Run the operator for the combined equations
-    _ = Operator(combined_equations)()
+
+    # mydebug_op(Operator(combined_equations))
+    myquiet_op(Operator(combined_equations))
     
     return combined_equations, full_f
