@@ -13,7 +13,7 @@ from devito.symbolics import retrieve_functions
 
 #################################################################################
 ##
-## If you want to set the Logging-Level of Devito Operator class
+## If you want to set the Logging-Level of Devito Operator class when called
 ##
 #################################################################################
 
@@ -97,7 +97,7 @@ def plot_equation_grid(equations, target_func, grid, ncols=3, cmap_name="jet"):
         cmap = plt.get_cmap(cmap_name, len(levels) - 1)
         norm = BoundaryNorm(levels, cmap.N)
 
-        # Build a compact symbolic title: full_f = full_f + main_f + left_f
+        # Build a compact symbolic title: full_f = full_f + main_f + left_f + ...
         try:
             lhs_name = eq.lhs.function.name
         except AttributeError:
@@ -147,7 +147,7 @@ def create_domain_functions_and_equations(grid, subdomains):
     subdomain_equations = []
     for idx, subd in enumerate(subdomains, start=1):
         # Use the subdomain's name attribute for the function name
-        subd_name = getattr(subd, 'name', f'subd{idx}')
+        subd_name = getattr(subd, 'name', f'subd{idx}') # subd.name if exists, else 'subd{idx}'
         func = Function(name=f'{subd_name}_f', grid=grid)
         eq = Eq(func, idx, subdomain=subd)   # func = idx in this subdomain (integer value)
         subdomain_functions.append(func)
@@ -159,8 +159,8 @@ def create_domain_functions_and_equations(grid, subdomains):
     ###########################################################
     # Run the operator to apply the each equation separately
 
-    # mydebug_op(Operator(all_equations))
-    myquiet_op(Operator(all_equations))
+    # _ = mydebug_op(Operator(all_equations))
+    _ = myquiet_op(Operator(all_equations))
 
     
     ###########################################################
@@ -176,7 +176,7 @@ def create_domain_functions_and_equations(grid, subdomains):
     ###########################################################
     # Run the operator for the combined equations
 
-    # mydebug_op(Operator(combined_equations))
-    myquiet_op(Operator(combined_equations))
+    # _ = mydebug_op(Operator(combined_equations))
+    _ = myquiet_op(Operator(combined_equations))
     
     return combined_equations, full_f
