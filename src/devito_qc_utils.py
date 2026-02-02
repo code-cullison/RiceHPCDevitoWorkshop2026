@@ -22,7 +22,9 @@ def plot_equation_grid(equations, target_func, grid, ncols=3, cmap_name="jet"):
     n_eqs = len(equations)
     nrows = int(np.ceil(n_eqs / ncols))
     fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(5*ncols, 5*nrows))
+    print(f'axes.shape B4: {axes.shape}')
     axes = np.array(axes).reshape(-1)
+    print(f'axes.shape AF: {axes.shape}')
 
     for i, (eq, ax) in enumerate(zip(equations, axes)):
         target_func.data[:] = 0
@@ -90,17 +92,17 @@ def create_domain_functions_and_equations(grid, subdomains):
         # Use the subdomain's name attribute for the function name
         subd_name = getattr(subd, 'name', f'subd{idx}')
         func = Function(name=f'{subd_name}_f', grid=grid)
-        eq = Eq(func, idx, subdomain=subd)
+        eq = Eq(func, idx, subdomain=subd)   # func = idx in this subdomain (integer value)
         subdomain_functions.append(func)
         subdomain_equations.append(eq)
     
     # Combine all equations: full domain + subdomains
     all_equations = [eq_full] + subdomain_equations
 
-    # Run the operator to apply the equations
+    # Run the operator to apply the each equation separately
     _ = Operator(all_equations)()
     
-    # For demonstration, create combined equations as in your workflow
+    # For demonstration, create combined equations (step-by-step inclusion of subdomains) 
     import operator
     from itertools import accumulate
     lhs = full_f
@@ -109,7 +111,7 @@ def create_domain_functions_and_equations(grid, subdomains):
     rhs_list = [lhs + s for s in partial_sums]
     combined_equations = [Eq(lhs, rhs) for rhs in rhs_list]
     
-    # Run the operator for the combined equations as well
+    # Run the operator for the combined equations
     _ = Operator(combined_equations)()
     
     return combined_equations, full_f
