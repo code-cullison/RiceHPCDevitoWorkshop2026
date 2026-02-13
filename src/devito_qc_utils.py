@@ -63,6 +63,34 @@ def devito_log_level(level):
         configuration['log-level'] = old_level
 
 
+#################################################################################
+##
+## Get stencil center coordinates one half-width away from each corner
+##
+#################################################################################
+def get_near_corner_points(grid, so):
+    offset = so // 2
+    nx, ny = grid.shape
+    ox, oy = grid.origin
+    sx, sy = grid.spacing
+
+    # Indices for near-corner points
+    points_idx = [
+        (offset, offset),                # lower-left
+        (offset, ny - offset - 1),      # upper-left
+        (nx - offset - 1, offset),      # lower-right
+        (nx - offset - 1, ny - offset - 1)  # upper-right
+    ]
+
+    # Coordinates for near-corner points
+    points_coord = [
+        (ox + ix * sx, oy + iy * sy)
+        for ix, iy in points_idx
+    ]
+
+    return points_idx, points_coord
+
+
 
 def plot_equation_grid(equations, target_func, grid, ncols=3, cmap_name="jet"):
     """
