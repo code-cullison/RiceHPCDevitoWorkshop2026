@@ -65,14 +65,134 @@ def devito_log_level(level):
 
 #################################################################################
 ##
+## Convert coordinates to indices, with NaN for out-of-bounds
+##
+#################################################################################
+def coordinates_to_indices(coords, grid):
+    """
+    Convert a single (x, y) coordinate pair to data indices (ix, iy) for a Devito grid.
+
+    If the coordinate is outside the grid extent, returns -np.nan if it is left or above
+    the grid, and +np.nan if it is right or below the grid, for each dimension.
+
+    Parameters
+    ----------
+    coords : iterable of float
+        A single (x, y) coordinate pair.
+    grid : devito.Grid
+        The Devito grid object.
+
+    Returns
+    -------
+    tuple
+        (ix, iy) data indices as integers if inside the grid, or -np.nan/+np.nan if out of bounds.
+    """
+    x, y = coords
+    ox, oy = grid.origin
+    sx, sy = grid.spacing
+    nx, ny = grid.shape
+
+    # Compute index for x
+    if x < ox:
+        ix = -np.nan
+    elif x > ox + sx * (nx - 1):
+        ix = +np.nan
+    else:
+        ix = int(round((x - ox) / sx))
+
+    # Compute index for y
+    if y < oy:
+        iy = -np.nan
+    elif y > oy + sy * (ny - 1):
+        iy = +np.nan
+    else:
+        iy = int(round((y - oy) / sy))
+
+    return (ix, iy)
+
+
+#################################################################################
+##
+## Convert indices to coordinates, with NaN for out-of-bounds
+##
+#################################################################################
+def indices_to_coordinates(indices, grid):
+    """
+    Convert a single (ix, iy) data index pair to physical coordinates (x, y) for a Devito grid.
+
+    If the index is outside the grid shape, returns -np.nan if it is left or above
+    the grid, and +np.nan if it is right or below the grid, for each dimension.
+
+    Parameters
+    ----------
+    indices : iterable of int
+        A single (ix, iy) data index pair.
+    grid : devito.Grid
+        The Devito grid object.
+
+    Returns
+    -------
+    tuple
+        (x, y) physical coordinates as floats if inside the grid, or -np.nan/+np.nan if out of bounds.
+    """
+    ix, iy = indices
+    ox, oy = grid.origin
+    sx, sy = grid.spacing
+    nx, ny = grid.shape
+
+    # Compute x coordinate
+    if ix < 0:
+        x = -np.nan
+    elif ix > nx - 1:
+        x = +np.nan
+    else:
+        x = ox + ix * sx
+
+    # Compute y coordinate
+    if iy < 0:
+        y = -np.nan
+    elif iy > ny - 1:
+        y = +np.nan
+    else:
+        y = oy + iy * sy
+
+    return (x, y)
+
+
+#################################################################################
+##
 ## Get stencil center coordinates one half-width away from each corner
 ##
 #################################################################################
 def get_near_corner_points(grid, so):
+    """
+    Return grid indices and physical coordinates for points near each corner of a 2D grid.
+
+    The points are offset from each corner by half the stencil width (so//2), which is useful
+    for placing sources, receivers, or boundary conditions away from the very edge of the domain.
+
+    Parameters
+    ----------
+    grid : devito.Grid
+        The computational grid object (must be 2D).
+    so : int
+        The spatial finite-difference stencil order (must be even).
+
+    Returns
+    -------
+    points_idx : list of tuple of int
+        List of (ix, iy) index pairs for the four near-corner points:
+        lower-left, upper-left, lower-right, upper-right.
+    points_coord : list of tuple of float
+        List of (x, y) physical coordinates corresponding to each index pair.
+
+    Raises
+    ------
+    ValueError
+        If any index or coordinate is out of bounds or NaN.
+    """
     offset = so // 2
     nx, ny = grid.shape
-    ox, oy = grid.origin
-    sx, sy = grid.spacing
 
     # Indices for near-corner points
     points_idx = [
@@ -82,11 +202,18 @@ def get_near_corner_points(grid, so):
         (nx - offset - 1, ny - offset - 1)  # upper-right
     ]
 
-    # Coordinates for near-corner points
-    points_coord = [
-        (ox + ix * sx, oy + iy * sy)
-        for ix, iy in points_idx
-    ]
+    # Check for NaN in indices
+    for idx in points_idx:
+        if any(np.isnan(i) for i in idx):
+            raise ValueError(f"Index {idx} contains NaN.")
+
+    # Use indices_to_coordinates for robust conversion (raises if out of bounds)
+    points_coord = []
+    for idx in points_idx:
+        coord = indices_to_coordinates(idx, grid)
+        if any(np.isnan(c) for c in coord):
+            raise ValueError(f"Coordinate {coord} (from index {idx}) contains NaN.")
+        points_coord.append(coord)
 
     return points_idx, points_coord
 
