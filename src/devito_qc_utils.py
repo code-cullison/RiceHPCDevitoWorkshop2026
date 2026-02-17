@@ -16,7 +16,6 @@ from devito.symbolics import retrieve_functions
 ## If you want to set the Logging-Level of Devito Operator class when called
 ##
 #################################################################################
-
 def myloglevel_devito(level):
     def decorator(func):
         @wraps(func)
