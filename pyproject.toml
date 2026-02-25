@@ -16,7 +16,7 @@ dependencies = [
   "sympy>=1.11",
   "ipython>=8.0",
   "ipykernel>=6.0",
-  "jupyterlab>=4.0"
+  "jupyterlab>=4.0",
   "devito>=4.8",
 ]
 
