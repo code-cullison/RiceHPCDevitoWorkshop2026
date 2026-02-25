@@ -22,6 +22,5 @@ dependencies = [
 
 [tool.setuptools]
 include-package-data = true
-
-[tool.setuptools.packages.find]
-where = ["."]
+package-dir = {"" = "src"}
+py-modules = ["devito_qc_utils"]
