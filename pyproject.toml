@@ -1,17 +1,27 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "devito_qc_utils"
+name = "devito-qc"
 version = "0.1.0"
-description = "Quality control utilities for Devito notebooks."
-authors = [
-    { name = "Your Name" }
+description = "QC notebooks and utilities for Rice HPC Devito Workshop 2026"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.23",
+  "matplotlib>=3.6",
+  "ipywidgets>=8.0",
+  "pandas>=1.5",
+  "sympy>=1.11",
+  "ipython>=8.0",
+  "ipykernel>=6.0",
+  "jupyterlab>=4.0"
+  "devito>=4.8",
 ]
-readme = ""
-requires-python = ">=3.8"
-dependencies = []
+
+[tool.setuptools]
+include-package-data = true
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
